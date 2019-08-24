@@ -1,0 +1,313 @@
+<div class="jumbotron">
+	<h2>Overview</h2>
+	<p>As a regular adventurer on the James River it's often crucial to know the state of the river prior to heading out. Factors such as water level or bacteria level ( > 235 cfu/100 ml  is considered bad) can determine whether its a good day to swim/tube/fish or if you'd be better off sticking to the trails. For this project I utilize the NodeMCU ESP8266 WiFi module (around $12 on Amazon), a RGB LCD display. I created a PCB in CircuitMaker (awesome freeware made by Altium) to bridge the WiFi module to the LCD, and allow the RBG backlights to be controlled by the ESP. I chose to write a Python script running on my server in order to simplify the web scraping to retrieve river/weather data and inject it into this site as an HTML document located here. The Python portion of this project is covered here. The main focus of this page is on the Arduino code running on the WiFi module. Much of this project was built on <a href="https://github.com/esp8266/Arduino/blob/master/libraries/ESP8266WiFi/examples/WiFiClient/WiFiClient.ino">this example code</a>.</p>
+	<div class="row">
+		<div class="col-md-6" style="padding-bottom: 50px">
+			<h3>The final product</h3>
+			<video width="320" height="240" controls>
+		    	<source src="assets/mp4/RiverWatch.mp4" type="video/mp4">
+		    	Your browser does not support the video tag.
+			</video>
+		</div>
+		<div class="col-md-6" style="padding-bottom: 50px">
+			<h3>Node MCU Esp8266</h3>
+			<img src="assets/images/RiverWatch/ESP8266NodeMCU.png" style="height: 250px; width: auto;">
+		</div>
+	</div>
+</div>
+
+<div class="jumbotron">
+	<h2>Pretty Pictures</h2>
+	<div class="row">
+		<div class="col-md-6">
+			<div class="row">
+				<div class="col-md-12">
+					<strong style="padding-left: 60px">RiverWatchPCB</strong>
+				</div>
+			</div>			
+			<div class="row">
+				<div class="col-md-12">
+					<img src="assets/images/RiverWatch/RiverWatchPCB.png" style="height: auto; width: 250px;">
+				</div>
+			</div>
+		</div>
+		<div class="col-md-6">
+			<div class="row">
+				<div class="col-md-12">
+					<strong style="padding-left: 60px">Stack Up Design</strong>
+				</div>
+			</div>			
+			<div class="row">
+				<div class="col-md-12">
+					<img src="assets/images/RiverWatch/StackUp.png" style="height: auto; width: 250px;">
+				</div>
+			</div>
+		</div>
+		<div class="col-md-6">
+			<div class="row">
+				<div class="col-md-12">
+					<strong style="padding-left: 60px">Stack Up</strong>
+				</div>
+			</div>			
+			<div class="row">
+				<div class="col-md-12">
+					<img src="assets/images/RiverWatch/AssembledBoard.png" style="height: auto; width: 250px;">
+				</div>
+			</div>
+		</div>
+		<div class="col-md-6">
+			<div class="row">
+				<div class="col-md-12">
+					<strong style="padding-left: 60px">Case Design</strong>
+				</div>
+			</div>			
+			<div class="row">
+				<div class="col-md-12">
+					<img src="assets/images/RiverWatch/CaseDesign.png" style="height: auto; width: 250px;">
+				</div>
+			</div>
+		</div>
+		<div class="col-md-6">
+			<div class="row">
+				<div class="col-md-12">
+					<strong style="padding-left: 60px">Printed Case</strong>
+				</div>
+			</div>			
+			<div class="row">
+				<div class="col-md-12">
+					<img src="assets/images/RiverWatch/DissasembledBox.png" style="height: auto; width: 250px;">
+				</div>
+			</div>
+		</div>
+		<div class="col-md-6">
+			<div class="row">
+				<div class="col-md-12">
+					<strong style="padding-left: 60px">Assembled Design</strong>
+				</div>
+			</div>			
+			<div class="row">
+				<div class="col-md-12">
+					<img src="assets/images/RiverWatch/RiverWatchMain.png" style="height: auto; width: 250px;">
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+
+<div class="jumbotron">
+	<h2>Setup and main loop</h2>
+	<p>This sets up both the WiFi connection and configures io pins for my LCD bridging PCB. It then directs the module to make a get request to <a href="http://rvariverpirate.com/assets/data/RiverInfo.html">rvariverpirate.com/assets/data/RiverInfo.html</a> and scrape the returned page for the paragraph tag via the getHtmlTagIndex function (discussed below). This portion of the HTML is a string containing river/weather data injected from the RiverScraper.py application. Once this string is read into the WiFi module it then scrolls it accross the LCD several times (see scrollToLeftLargeString function below) and then checks for updates to that page.</p>
+	<pre><code highlight [code]="'
+#include <ESP8266WiFi.h>
+#include <LiquidCrystal.h>
+
+// Setup ESP pins for LCD display
+const int rs = 13, en = 15, d4 = 12, d5 = 14, d6 = 2, d7 = 0;
+LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
+
+const char* ssid     = \'\'WiFi\'\';
+const char* password = \'\'WiFiPassword\'\';//
+
+const char* host = \'\'rvariverpirate.com\'\';
+
+// Create a URI for the request
+String url = \'\'/assets/data/RiverInfo.html\'\';
+
+void setup() {
+
+  // initialize digital pin LED_BUILTIN as an output.
+  pinMode(D0, OUTPUT);
+  pinMode(D1, OUTPUT);
+  pinMode(D2, OUTPUT);
+
+  // Set the background color
+  digitalWrite(D1, HIGH);    // turn the LED off by making the voltage LOW
+  digitalWrite(D2, HIGH);
+
+  
+  Serial.begin(115200);
+  delay(10);
+
+  // We start by connecting to a WiFi network
+
+  Serial.println();
+  Serial.println();
+  Serial.print(\'\'Connecting to \'\');
+  Serial.println(ssid);
+  
+  WiFi.begin(ssid, password);
+  
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(\'\'.\'\');
+  }
+
+  Serial.println(\'\'\'\');
+  Serial.println(\'\'WiFi connected\'\');  
+  Serial.println(\'\'IP address: \'\');
+  Serial.println(WiFi.localIP());
+}
+
+int value = 0;
+int p_openIndex = 0;
+int p_closeIndex = 1;
+void loop() {
+  delay(5000);
+  ++value;
+
+  Serial.print(\'\'connecting to \'\');
+  Serial.println(host);
+  
+  // Use WiFiClient class to create TCP connections
+  WiFiClient client;
+  const int httpPort = 80;
+  if (!client.connect(host, httpPort)) {
+    Serial.println(\'\'connection failed\'\');
+    return;
+  }
+  
+  Serial.print(\'\'Requesting URL: \'\');
+  Serial.println(url);
+  
+  // This will send the request to the server
+  client.print(String(\'\'GET \'\') + url + \'\' HTTP/1.1\\r\\n\'\' +
+               \'\'Host: \'\' + host + \'\'\\r\\n\'\' + 
+               \'\'Connection: close\\r\\n\\r\\n\'\');
+  delay(10);
+  
+  // Read all the lines of the reply from server and print them to Serial
+  int counter = 0;
+  while(client.available()){
+    String line = client.readStringUntil(\'\'\\r\'\');
+    Serial.print(line);
+    Serial.println(\'\'\\r\\n\'\');
+    Serial.println(String(counter));
+    if(checkForTag(\'\'<p>\'\', line)){
+      p_openIndex = getHtmlTagIndex(\'\'<p>\'\', line);
+      p_closeIndex = getHtmlTagIndex(\'\'</p>\'\', line);
+      String interest = line.substring(p_openIndex, p_closeIndex);
+      Serial.print(interest);
+      for(int i = 0; i < 3; i++){
+        scrollToLeftLargeString(interest, 250);
+        }
+      }
+    counter ++;
+  }
+
+'"></code></pre>
+</div>
+<div class="jumbotron">
+	<h2>The Scrolling function</h2>
+	<p>While the LiquidCrystal library does contain functionality to scroll text across a screen, I found that the length of the string you could use was limited. This code allows for much larger pieces of text to be scrolled across the display. Only two input parameters are neede. 1.) The string that you want displayed 2.) The delay between each character shift.</p>
+		<pre><code highlight [code]="'
+// Function to scroll large texts accross the LCD display
+void scrollToLeftLargeString(String str, int delayTime){
+  String tempString = \'\'                 \'\';
+  lcd.clear();
+  for(int i = 0; i < str.length() + 32; i++)
+  {
+    if(i < str.length()){
+      tempString += str[i];// add current char to temporary string
+    }
+    else
+    {
+      tempString += \'\' \'\';// let the last  16 chars scroll across the screen
+    }
+    if(i > 16)// string is loaded
+    {
+      tempString.remove(0,1);// remove the first character in the temp string
+      lcd.println(tempString);
+      Serial.println(tempString);
+      delay(delayTime);
+      lcd.clear();
+    }
+  }
+}
+'"></code></pre>
+</div>
+<div class="jumbotron">
+	<h2>Scan for HTML Tags</h2>
+	<p>This function scans the returned page for HTML tags. It takes two parameters 1.) HTML Tag as a string and 2.) The larger string you want to scan. This returns the contents enclosed by the first instance of this tag.</p>
+		<pre><code highlight [code]="'
+int getHtmlTagIndex(String tag, String page){
+  bool tagFound;
+  Serial.println(\'\'Inside getHtmlTagIndex\\r\\n\'\');
+  bool isCloseTag = checkForChar(tag, \'/\');
+  int textIndex = 0;
+  if(page.length() > tag.length()){
+    for(int i = 0; i < page.length() - (tag.length() - 1); i++){
+      tagFound = true;// Start true
+      
+      for(int j = 0; j < tag.length(); j++){
+          if(page.charAt(i+j) != tag.charAt(j)){
+              // if the character is ever a mis-match set false
+              tagFound = false;
+            }
+        }
+      if(tagFound){
+          Serial.println(\'\'Tag Found\\r\\n\'\');
+          if(isCloseTag){
+              textIndex = i;
+            }
+          else{
+            textIndex = i + tag.length();
+          }
+          break;
+        }
+      }
+    }
+    else{
+      textIndex = -1;
+      }
+    Serial.println(String(textIndex));
+    return textIndex;
+  }
+'"></code></pre>
+</div>
+<div class="jumbotron">
+	<h2>Aditional Functions</h2>
+	<p>These functions are somewhat more trivial in operation. However they are still required for the correct operation of this code.</p>
+		<pre><code highlight [code]="'
+bool checkForTag(String tag, String page){
+  bool tagFound;
+  Serial.println(\'\'Inside checlForTag\\r\\n\'\');
+  Serial.println(String(page.length()));
+  Serial.println(\'\'\\n\'\');
+  Serial.println(String(tag.length()));
+  if(page.length() > tag.length()){
+    for(int i = 0; i < page.length() - (tag.length() - 1); i++){
+      tagFound = true;// Start true      
+      for(int j = 0; j < tag.length(); j++){
+          if(page.charAt(i+j) != tag.charAt(j)){
+              // if the character is ever a mis-match set false
+              tagFound = false;
+            }
+        }
+      if(tagFound){
+          Serial.println(\'\'Tag Found\\r\\n\'\');
+          break;
+        }
+      }
+    if(!tagFound){
+      Serial.println(\'\'Tag NOT Found!\\r\\n\'\');
+      }
+  }
+  else{
+      tagFound = false;
+    }
+  return tagFound;
+}
+
+bool checkForChar(String line, char c){
+    bool containsChar = false;
+    for(int i = 0; i< line.length(); i++){
+        if(line.charAt(i) == c){
+            containsChar = true;
+            Serial.println(\'\'CharacterFound!\'\');
+            break;
+          }
+      }
+    return containsChar;
+  }
+'"></code></pre>
+</div>

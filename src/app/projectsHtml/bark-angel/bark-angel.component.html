@@ -1,0 +1,439 @@
+<div class="jumbotron">
+	<h2>Overview</h2>
+	<p>Our dog Riley has has had alot of close calls (eating socks, Sago Palm, the eyes of squirrels) and like any concerned parrent we wanted to . Introducing Barkangel, the realtime dog monitoring system. Simply attach the halo collar to your dog, place the tracker in an open area and run the tracking software. Then at anytime you can remotely login to the system and see in real time what your dog is doing without escaping the frame.</p>
+	<div class="row">
+		<div class="col-md-6" style="padding-bottom: 50px">
+			<h3>Test 1: Hand Held</h3>
+			<video width="320" height="240" controls>
+		    	<source src="assets/mp4/HandHeldTrim2.mp4" type="video/mp4">
+		    	Your browser does not support the video tag.
+			</video>
+		</div>
+		<div class="col-md-6">
+			<h3>Test 2: Dog Tracking</h3>
+			<video width="320" height="240" controls>
+		    	<source src="assets/mp4/DogTrackingTrim2.mp4" type="video/mp4">
+		    	Your browser does not support the video tag.
+			</video>
+		</div>
+	</div>
+</div>
+
+<div class="jumbotron">
+	<h2>Parts</h2>
+	<div class="row">
+		<div class="col-md-6">
+			<div class="row">
+				<div class="col-md-12">
+					<strong style="padding-left: 60px">BSeen LED Collar</strong>
+				</div>
+			</div>			
+			<div class="row">
+				<div class="col-md-12">
+					<img src="assets/images/GlowCollar.jpg" style="height: 250px; width: 250px;">
+				</div>
+			</div>
+		</div>
+		<div class="col-md-6">
+			<div class="row">
+				<div class="col-md-12">
+					<strong style="padding-left: 60px">Raspberry Pi3</strong>
+				</div>
+			</div>			
+			<div class="row">
+				<div class="col-md-12">
+					<img src="assets/images/RaspberryPi3.jpg" style="height: 250px; width: 250px;">
+				</div>
+			</div>
+		</div>
+		<div class="col-md-6">
+			<div class="row">
+				<div class="col-md-12">
+					<strong style="padding-left: 60px">ATMega328p</strong>
+				</div>
+			</div>			
+			<div class="row">
+				<div class="col-md-12">
+					<img src="assets/images/ATMega328Real.jpg" style="height: 250px; width: 250px;">
+				</div>
+			</div>
+		</div>
+		<div class="col-md-6">
+			<div class="row">
+				<div class="col-md-12">
+					<strong style="padding-left: 60px">Mini Pan/Tilt Camera Platform</strong>
+				</div>
+			</div>			
+			<div class="row">
+				<div class="col-md-12">
+					<img src="assets/images/PanTilt.jpg" style="height: 250px; width: 250px;">
+				</div>
+			</div>
+		</div>
+		<div class="col-md-6">
+			<div class="row">
+				<div class="col-md-12">
+					<strong style="padding-left: 60px">Raspberry Pi Camera</strong>
+				</div>
+			</div>			
+			<div class="row">
+				<div class="col-md-12">
+					<img src="assets/images/PiCamera.jpg" style="height: 250px; width: 250px;">
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+
+<div class="jumbotron">
+	<h2>PID Loop</h2>
+	<p>PID (Proportional, Derivative, Integral) loops are very common in control systems and are very easy to implement. For this project a PID class is included in <strong>ControlsSystems.py</strong>.</p>
+	<pre><code highlight [code]="'
+class PID():
+    def __init__(self, Kp, Ki, Kd):
+        self.Kp = Kp
+        self.Ki = Ki
+        self.Kd = Kd
+        self.prevValue = 0
+    	self.integralValue = 0
+    	self.proportionalGain = 0
+    	self.integralGain = 0
+    	self.derivativeGain = 0
+    	self.totalGain = 0
+        
+    def updateGain(self, currentValue, deltaT):
+        self.proportionalGain = currentValue*self.Kp
+        self.integralValue += currentValue
+        self.integralGain = self.integralValue*self.Ki*deltaT
+        self.derivativeGain = self.Kd*(currentValue - self.prevValue)/deltaT
+        self.prevValue = currentValue
+        self.totalGain = self.proportionalGain + self.integralGain + self.derivativeGain
+        return self.totalGain'"></code></pre>
+</div>
+
+<div class="jumbotron">
+	<h2>Servo Controller Code</h2>
+	<p>In order to work with this system the Pi has to send a specific message to the AVR for srevo control. Within the servo directory the file ServoController.py contains a class <strong>servoController</strong>. This class handles the formatting and transmission of this message.</p>
+	<pre><code highlight [code]="'
+import serial
+
+class servoController():
+    ##################
+    # Servo Commands #
+    ##################
+    right = \'r\'
+    left = \'l\'
+    up = \'u\'
+    down = \'d\'  
+    
+    
+    def __init__(self, serialPort, baudRate):
+        ##############################
+        # Setup Serial Communication #
+        ##############################
+        self.avrSerial = serial.Serial(serialPort, baudRate, timeout=3)
+
+
+    # Puts string into propper format for the microcontroller to receive
+    def formatTheta(self, theta):
+        if(theta < 10):
+            addString = \'00\'
+        elif(theta < 100):
+            addString = \'0\'
+        else:
+            addString = \'\'
+        return addString + str(theta)
+
+
+    def updateAngles(self, pan_deg, tilt_deg):
+        
+        commandString = \'\'
+        sendMessage = False
+        
+        # Control Pan
+        if(pan_deg > 0):
+            print(\'Move Left\')
+            avrCommand = self.left
+            degreeShift = pan_deg
+            print(\'degreeShift = \', degreeShift)
+            degreeShift = self.formatTheta(abs(int(degreeShift)))   
+            commandString += avrCommand + degreeShift
+            sendMessage = True
+            
+        elif(pan_deg < 0):
+            print(\'Move Right\')
+            avrCommand = self.right
+            degreeShift = pan_deg
+            print(\'degreeShift = \', degreeShift)
+            degreeShift = self.formatTheta(abs(int(degreeShift)))    
+            commandString += avrCommand + degreeShift
+            sendMessage = True
+            
+        else:
+            commandString += \'r000\'
+            print(\'Pan Good!\')
+    
+        # Control Tilt
+        if(tilt_deg > 0):
+            print(\'Move up\')
+            avrCommand = self.up
+            degreeShift = tilt_deg
+            print(\'degreeShift = \', degreeShift)
+            degreeShift = self.formatTheta(abs(int(degreeShift))) 
+            commandString += avrCommand + degreeShift
+            sendMessage = True
+            
+        elif(tilt_deg < 0):
+            print(\'Move Down\')
+            avrCommand = self.down
+            degreeShift = tilt_deg
+            print(\'degreeShift = \', degreeShift)
+            degreeShift = self.formatTheta(abs(int(degreeShift)))   
+            commandString += avrCommand + degreeShift
+            sendMessage = True
+            
+        else:
+            commandString += \'u000\'
+            print(\'Tilt Good!\')
+        
+        
+        if(sendMessage):
+            commandString += \'s\'
+            print(commandString)
+            self.avrSerial.write((commandString).encode())
+            
+    def disconnect(self):
+        self.avrSerial.close()
+            
+        
+################
+# Test Library #
+################
+if(False):
+    myController = servoController(\'/dev/serial0\', 4800)
+    myController.updateAngles(30, -30)
+    myController.disconnect()
+'"></code></pre>
+</div>
+<div class="jumbotron">
+	<h2>Tracker Follower Code</h2>
+	<p>This is where the magic happens. Thanks to OpenCV there are a ton of easy to use image processing functions available out of the box. The tracker is really just using a HSV bitmask. HSV (Hue, Saturation, Value) is just another way to quantize color, similar to RGB (Red, Green, Blue). HSV is used instead of RBG because it is much better at for color filtering and detection. This code provides three trackbars that allow the user to adjust the HSV values for the bitmask so it can be tuned to target any color.</p>
+	<p>Iv'e found <a href="https://www.pyimagesearch.com/2016/02/01/opencv-center-of-contour/">Pyimagesearch.com</a> and <a href="pythonprogramming.net>https://pythonprogramming.net/raspberry-pi-camera-opencv-face-detection-tutorial/">pythonprogramming.net</a> provide a great place to learn some of these techniques along with the <a href="https://docs.opencv.org/3.1.0/index.html">OpenCV API</a>. Installing OpenCV on Raspberry Pi is as easy as <strong>pip install opencv-python</strong>. Also if you're looking to use some of the non-opensource features like MIL Tracker and SIFT you'll need the contrib version. I haven't tried on on the Pi but for your computer just run <strong>pip install opencv-contrib-python</strong> to get these features.</p>
+	<div class="row">
+		<div class="col-md-6">
+			<div class="row">
+				<div class="col-md-12">
+					<strong style="padding-left: 60px">HSV color model</strong>
+				</div>
+			</div>			
+			<div class="row">
+				<div class="col-md-12">
+					<img src="assets/images/HSV.png" style="height: auto; max-width: 100%;">
+				</div>
+			</div>
+		</div>
+		<div class="col-md-6">
+			<div class="row">
+				<div class="col-md-12">
+					<strong style="padding-left: 40px">RGB color model</strong>
+				</div>
+			</div>			
+			<div class="row">
+				<div class="col-md-12">
+					<img src="assets/images/RGB.png" style="height: auto; max-width: 100%;">
+				</div>
+			</div>
+		</div>
+	</div>
+	<p>Additionally in order to reduce noise it is often usefull to blur the image slightly. After, the masked image has been blurred we now find the contours of the resultant shapes. Next we select the centroid of the largest contour to get it's pixel coordinate. We want this location relative to the center pixel, not the upper left corner so we use the following equation <strong>xError, yError = -(cX - width), (height - cY)</strong>. Now we have a pixel error relative to the center of the camera. For the PID loop we also need keep track of the time between frames for the intergal and derivative gains. Finally, we feed our pixel errors and time between frames to instances of our PID class.</p>	
+		<pre><code highlight [code]="'
+# import the necessary packages
+from picamera.array import PiRGBArray
+from picamera import PiCamera
+import time
+import imutils
+import cv2
+import numpy as np
+from Servo.ServoController import servoController
+from ControlSystems import PID
+#from matplotlib import pyplot as plt
+
+####################################
+# Setup Serial Servo Communication #
+####################################
+myServo = servoController(\'/dev/serial0\', 4800)
+
+##################
+# Servo Commands #
+##################
+right = \'r\'
+left = \'l\'
+up = \'u\'
+down = \'d\'
+
+##################
+# Setup PID Loop #
+##################
+Kp, Ki, Kd = 0.065, 0.005, 0.00005
+xPID = PID(Kp, Ki, Kd)
+yPID = PID(Kp, Ki, Kd)
+
+
+# Puts string into propper format for the microcontroller to receive
+def formatTheta(theta):
+    if(theta < 10):
+        addString = \'00\'
+    elif(theta < 100):
+        addString = \'0\'
+    else:
+        addString = \'\'
+    return addString + str(theta)
+
+# initialize the camera and grab a reference to the raw camera capture
+camera = PiCamera()
+camera.resolution = (640, 480)
+camera.framerate = 32
+rawCapture = PiRGBArray(camera, size=(640, 480))
+
+# Create a window for our Trackbar
+TrackbarHSV = np.zeros((300, 512, 3), np.uint8)
+cv2.namedWindow(\'TrackbarHSV\')
+
+# Create a Trackbar to allow user modify HSV Bitmask
+h, s, v, = 20, 100, 65# initial values
+def printHSV(x):
+    print(\'h: \' + str(h))
+    print(\'s: \' + str(s))
+    print(\'v: \' + str(v))
+cv2.createTrackbar(\'h\', \'TrackbarHSV\', 60, 179, printHSV)
+cv2.createTrackbar(\'s\', \'TrackbarHSV\', 130, 255, printHSV)
+cv2.createTrackbar(\'v\', \'TrackbarHSV\', 225, 255, printHSV)
+
+# allow the camera to warmup
+time.sleep(0.1)
+ 
+# capture frames from the camera
+for frame in camera.capture_continuous(rawCapture, format=\'bgr\', use_video_port=True):
+	TrackbarHSV[:] = [h, s, v]
+	TrackbarHSV = cv2.cvtColor(TrackbarHSV, cv2.COLOR_HSV2BGR)
+	cv2.imshow(\'TrackbarHSV\', TrackbarHSV)
+	start = time.time()# Start the timer
+	# grab the raw NumPy array representing the image, then initialize the timestamp
+	# and occupied/unoccupied text
+	image = frame.array
+	image = imutils.rotate(image, 180)# the cammera is upside down, flip image
+	
+	key = cv2.waitKey(1) & 0xFF
+        
+        # load the image and resize it to a smaller factor so that
+        # the shapes can be approximated better
+	resized = imutils.resize(image, width=300)
+	ratio = image.shape[0] / float(resized.shape[0])
+         
+	# Convert BGR to HSV
+	hsv = cv2.cvtColor(resized, cv2.COLOR_BGR2HSV)
+	
+	# Get info from track bar and apply to HSV Bitmask
+	h = cv2.getTrackbarPos(\'h\', \'TrackbarHSV\')
+	s = cv2.getTrackbarPos(\'s\', \'TrackbarHSV\')
+	v = cv2.getTrackbarPos(\'v\', \'TrackbarHSV\')
+
+	# Create the bitmask
+	lowerRange = np.array([h, s, v])
+	upperRange = np.array([180, 255, 255])
+	mask = cv2.inRange(hsv, lowerRange, upperRange)
+	
+	# blur image to smoothe contours
+	blurred = cv2.GaussianBlur(mask, (5, 5), 0)
+			    
+	# Bitwise-AND mask and original image
+	masked = cv2.bitwise_and(blurred, blurred, mask= mask)
+        
+        # find contours in the thresholded image and initialize the
+        # shape detector
+	cnts = cv2.findContours(masked.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+	cnts = cnts[0] if imutils.is_cv2() else cnts[1]
+        
+        # Display the masked image
+	cv2.imshow(\'Masked Image\', masked)
+        
+        #########################
+	# User Control Pan Tilt #
+        #########################
+	controlKey = cv2.waitKey(1)
+	if(controlKey == ord(\'u\')):# Up
+            myServo.updateAngles(0, -5)# Up 5 deg
+	elif(controlKey == ord(\'d\')):# Down
+            myServo.updateAngles(0, 5)# Down 5 deg
+	elif(controlKey == ord(\'l\')):# Left
+            myServo.updateAngles(5, 0)# Left 5 deg
+	elif(controlKey == ord(\'r\')):# Right
+            myServo.updateAngles(-5, 0)# Right 5 deg
+        # A spacebar was pressed, Initiate Bitmap Tracking
+	elif(controlKey == ord(\' \')):
+            TrackImage = True
+        	
+	try:
+            c = max(cnts, key = cv2.contourArea)# Select the largest area
+            M = cv2.moments(c)
+            cX = int((M[\'m10\'] / M[\'m00\']) * ratio)
+            cY = int((M[\'m01\'] / M[\'m00\']) * ratio)
+     
+            # multiply the contour (x, y)-coordinates by the resize ratio,
+            # then draw the contours and the name of the shape on the image
+            c = c.astype(\'float\')
+            c *= ratio
+            c = c.astype(\'int\')
+            cv2.drawContours(image, [c], -1, (0, 255, 0), 2)
+            #locationString = \'(\' + str(cX) + \', \' + str(cY) + \')\'
+            #cv2.putText(image, locationString, (cX, cY), cv2.FONT_HERSHEY_SIMPLEX,	0.5, (255, 0, 0), 2)
+        
+            # Get Dimensions of the Image
+            width = 1.5*resized.shape[0]#*ratio
+            height = resized.shape[1]#*ratio
+	    
+            # Stop timer and display frame rate
+            stop = time.time()# Start the timer
+            deltaT = stop - start
+            print(\'deltaT (s): \', (stop - start))
+	    
+	    # Update the pixel error
+            xError, yError = -(cX - width), (height - cY)
+            errorString = \'(\' + str(xError) + \', \' + str(yError) + \')\'
+            cv2.putText(image, errorString, (cX, cY), cv2.FONT_HERSHEY_SIMPLEX,	0.5, (255, 0, 0), 2)
+	    
+	    # Update the PID loops
+            xGain = xPID.updateGain(xError, deltaT)
+            yGain = yPID.updateGain(yError, deltaT)
+	    
+            # Tell Servo to center itself on the centroid of the bitmask
+            myServo.updateAngles(xGain, yGain)	
+	
+	except:            
+            cv2.putText(image, \'Error\', (0, 0), cv2.FONT_HERSHEY_SIMPLEX,	0.5, (0, 0, 255), 2)
+            print(\'No blobs found, dont move\')
+            
+            # Stop timer and display frame rate
+            stop = time.time()# Start the timer
+            deltaT = stop - start
+            print(\'deltaT (s): \' + str(deltaT))
+        
+	# show the output image
+	cv2.imshow(\'Blobs\', image)
+        
+
+	# clear the stream in preparation for the next frame
+	rawCapture.truncate(0)
+ 
+	# if the \'q\' key was pressed, break from the loop
+	if key == ord(\'q\'):
+            cv2.destroyAllWindows()
+            break
+'"></code></pre>
+</div>
+
+<div class="jumbotron">
+	<h2>AVR Codes</h2>
+	<p>Because the Raspberry Pi only has one PWM module not tied to the OS, I chose to instead leave the work of the PWM to an ATMega328p microcontroller. The Raspbreey Pi sends a mesage over UART to the ATMega which in turn drive the servos. A breif tutorial on this code is on this site under the Electronics section, then choose ServoPWM.</p>
+
+</div>

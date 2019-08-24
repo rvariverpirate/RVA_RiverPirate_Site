@@ -1,0 +1,94 @@
+<div class="jumbotron">
+	<h3>This breif example and source code will allow you to implement UART Serial communication on the ATMega328p.</h3>
+	<p>UART is a Universal Asynchronous/Synchronous Communication protocol standard most microcontrollers. UART uses RS-232 (3.3V High and 0V Low) and requires three wires for full duplex opperation (receive and transmit at same time). TX - transmit, RX - receive, and GND. Be sure to connect respective TX on one device to RX on the other.
+	This example consists of three files
+<strong>BasicUART.h</strong> header file that you can easilly include in your own projects by placing it in the same direcory as your main C file and by adding '#include BasicUART.h' at the top of you main C file. The socond file is a very basic example to display send some characters serially out. If you dont have an FTDI cable (USB to serial converter) I strongly recomend you purchase one as they are invaluable for debugging software and numerous other things.
+<strong>BasicUART.c</strong> is an a basic example of the UART functionality. It receives characters untill enter is pressed and then echos the string back out. In addition to the FTDI cable you will want to install a serial monitor to view the output. I usually use <a href="http://freeware.the-meiers.org/">CoolTerm</a> because it has a lot of nice features and is available for Mac, Windows, and Linux. Also the Arduino IDE contains a decent serial monitor that useually works just fine.</p>
+</div>
+
+<div class="jumbotron">
+	<div class="container">
+		<div class="row">
+			<h3>ATMega328p Pinout</h3>
+		</div>
+  		<div class="row">
+  			<div class="col-md-12">
+				<img src="assets/images/atmega328w.png" style="height: auto; max-width: 100%;">
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-md-12">
+				<h3>FTDI (USB to Serial) Pinout</h3>
+			</div>
+		</div>
+		<div class="row">
+			<img src="assets/images/ftdi_5v.jpg" style="height: auto; max-width: 100%;">
+		</div>
+	</div>
+</div>
+
+<div class="jumbotron">
+	<h3>BasicUART.h</h3>
+		<pre><code highlight [code]="'#define BAUDPRESCALLER (((F_CPU/(BAUDRATE * 16UL)))) - 1
+
+void USART_init(void)
+{
+	UBRR0H = (uint8_t)((BAUDPRESCALLER>>8));
+	UBRR0L = (uint8_t)(BAUDPRESCALLER);
+	UCSR0B = (1<<RXEN0)|(1<<TXEN0);
+	UCSR0C = (3<<UCSZ00);
+}
+
+void USART_send(unsigned char data)
+{
+	while(!(UCSR0A & (1<<UDRE0)));
+	UDR0 = data;
+}
+
+void USART_putstring(char* StringPtr)
+{
+	while(*StringPtr != 0x00)
+	{
+		USART_send(*StringPtr);
+		StringPtr++;	
+	}
+}
+
+unsigned char USART_receive(void)
+{
+	while(!(UCSR0A & (1<<RXC0)));
+	return UDR0;
+}
+
+void USART_getstring(char readString[25]){
+	int i = 0;
+	while(1){
+		readString[i] = USART_receive();
+		if(readString[i] == \'\\n\') break;
+		i++;
+	}
+}'"></code></pre>
+</div>
+
+<div class="jumbotron">
+	<h3>BasicUART.c</h3>
+	<pre><code highlight [code]="'#define F_CPU 1000000UL
+#define BAUDRATE 4800
+#include <util/delay.h>
+#include \'\'BasicUART.h\'\'
+
+char myString[30];// used to store incoming string
+
+int main(void){
+	USART_init();
+	while(1)
+	{
+		_delay_ms(250);// Wait for 1 (s)
+		USART_getstring(myString);
+		USART_putstring(myString);
+	}
+	return 0;	
+}'"></code></pre>
+
+<h4>Note:</h4><p>If you are using an oscilator running at a different speed than 1 MHz you will need to change the value of F_CPU to match you oscilator speed. The current setting uses the ATMega's internal 1MHz oscilator (which is the default unless you burnt the fuse bits to configure an external oscilator).</p>
+</div>

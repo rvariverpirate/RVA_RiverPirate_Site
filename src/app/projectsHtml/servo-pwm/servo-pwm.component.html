@@ -1,0 +1,270 @@
+<div class="jumbotron">
+	<h3>Learn PWM on an AVR microcontroller and control a servo over UART</h3>
+	<p>PWM is usefull for numerous electronic application such as adjusting the brightness of an LED or control of servo motors.</p>
+	<p>This breif tutorial consists of 3 files. <strong>ServoPWM.h</strong> can be included in any project for easy setup and control of a standard 20Hz servo. <strong>ServoPWM.c</strong> provides a very basic implementation of the <strong>ServoPWM.h</strong> functionality by gradually incrementing the pan angle, and then wiggling at the end. <strong>BasicUART.h</strong> is mentioned here because UART will be required to control the servo from a serial communication. Finally, <strong>UART_PWM.c</strong> pulls it all together and allows you to control two servos (pan and tilt) from a serial monitor or Python script. All source codes are availabe <a href="https://github.com/rvariverpirate/UART_PWM">here.</a></p>
+</div>
+
+<div class="jumbotron">
+	<h3>The setup</h3>
+	<p>The wiring for this setup is similar to the BasicUART example, only with 6 more wires for the two servos.</p>
+	<ul>
+		<li><strong>AVR -> FTDI Cable</strong></li>
+		<li>Tx -> Rx</li>
+		<li>Rx -> Tx</li>
+		<li>Gnd -> Gnd</li>
+		<li>+5V -> +5V</li>
+	</ul>
+		<ul>
+		<li><strong>AVR -> Servo</strong></li>
+		<li>5V -> 5V</li>
+		<li>Gnd -> Gnd</li>
+		<li>PB1 (pin 15) -> Servo 1 Signal</li>
+		<li>PB2 (pin 16) -> Servo 2 Signal</li>
+	</ul>
+	<div class="container">
+		<div>
+			<h3>ATMega328p Pinout</h3>
+		</div>
+  		<div class="row">
+  			<div class="col-md-12">
+				<img src="assets/images/atmega328w.png" style="height: auto; max-width: 100%;">
+			</div>
+		</div>
+		<div>
+			<h3>FTDI (USB to Serial) Pinout</h3>
+		</div>
+		<div class="row">
+			<div class="col-md-12">
+				<img src="assets/images/ftdi_5v.jpg" style="height: auto; max-width: 100%;">
+			</div>
+		</div>
+			<h3>Various Servo Motor Pinouts</h3>
+		<div class="row">
+			<div class="col-sm-6">
+				<img src="assets/images/myServoPinout.gif" style="height: auto; max-width: 100%;">
+			</div>
+			<div class="col-sm-6">
+				<img src="assets/images/alternativeServoPinout.gif" style="height: auto; max-width: 100%;">
+			</div>
+		</div>
+	</div>
+</div>
+
+<div class="jumbotron">
+	<h3>ServoPWM.h</h3>
+		<p>		This header file should set up the ATMega for PWM. This setup is meant for servo motor control and produces a wave form with a 20Hz frequency and variable pulse width (standard for most servos).TCR1A and TCR1B are the Timer Counter Control ontrol Registers used to setup the PWM. DDRB or Data Directional Register B establishes wether a pin is an input or an output. Here PortB1 and PortB2 are set as outputs and corespond to physical pins 15 and 16 respectively. These pins were chosen because they capable of producing PWM and are tied to OC1A/B registers (this stands for output compare). THe CS10/11 bits in the Timer Counter Compare Register establish the prescalar.</p>
+		<p>		This example uses phase correct frequency correct PWM (note that pahse corecctness is not required for servo control). Baically the system clock is reduced by the clock divider, every 1/ClockDivider clock cycles a counter variable is updated untill it reaches a maximum values (in this case the value of ICR1 = 10000). After this the counter decrements untill it reaches zero again, then counts up agian. Aditionally the OutputCompare (pins 15 and 16) are toggled off and on whenever the counter value is equal to a specified value. This value along with the frequency determine the pulse width.</p>
+		<div>
+			<div class="row">
+					<img src="assets/images/PhaseCorrect3.png" style="height: auto; max-width: 100%; padding-bottom: 30px; padding-top: 20px">
+			</div>
+			<p>The frequency of the PWM can be calculated via the following equation.</p>
+			<div class="row">
+				<img src="assets/images/PhaseCorrectFrequency.png" style="height: auto; max-width: 100%; padding-bottom: 30px">
+			</div>
+		</div>
+	<pre><code highlight [code]="'
+#include <avr/io.h>
+
+// Define Global Variables
+uint16_t TOP = 10000;//62500;// This ultimatley sets the frequency (50Hz)  Note: uint16_t overflows above 65,535
+double ThetaPan = 0;// (degrees) Angle for Pan Servo
+double DutyCyclePan = 5;// (%) Sclaes the Duty Cycle, DutyCycle = 1/DutyCycleRecip, (1 -> allways on)
+double ThetaTilt = 0;// (degrees) Angle for Pan Servo
+double DutyCycleTilt = 5;// (%) Sclaes the Duty Cycle, DutyCycle = 1/DutyCycleRecip, (1 -> allways on)
+
+void setupPWM(void){
+	// This is Governing Equation for Frequency of PWM. Read this to understand!!!!!
+	/* f_pwm = f_cpu/(2*N*TOP), where: TOP = OCR1A, N = prescaller */
+	
+	/* Prescaller is set by CS12, CS11, CS10 registers */
+	/* Examples: 0,0,0 => no prescaler clock stopped; 0,0,1 => 1/1 clock will run;  */
+	/* 0,1,0 => 1/8; 0,1,1 => 1/64; 1,0,0 => 1/256; 1,0,1 => 1/1024; 1,1,0 => external timer connected (not oscilator) */
+
+	// initialize the direction of PORTB1 to be an output
+	DDRB = (1<<PORTB1) | (1<<PORTB2);// PB1:2 as output for OC1A
+
+	TCCR1A = (1<<COM1A0) | (1<<COM1A1) | (1<<COM1B0) | (1<<COM1B1);// Timer Counter Control Register A
+	TCCR1B = (1<<WGM13);// WGM - Wave Generation Mode
+
+	ICR1 = TOP;// Provides scalar for PWM Frequency !NOT DutyCycle!!
+	
+
+	if(F_CPU == 1000000){
+		TCCR1B |= (1<<CS10);// Sets prescalar, currently to 1/1, also will start timer
+	}
+	else if(F_CPU == 8000000){
+		TCCR1B |= (1<<CS11);// Sets prescalar, currently to 1/8, also will start timer
+	}
+	else if(F_CPU == 16000000){
+		TCCR1B |= (1<<CS10) | (1<<CS11);// Sets prescalar, currently to 1/64, also will start timer
+		// !! Note !! You will also need to change the \'TOP\' to 2500	
+	}
+}
+
+double changeAngle(double Theta, double DeltaTheta){
+	Theta += DeltaTheta;
+	if(Theta > 179){
+		Theta = 179;		
+	}
+	else if(Theta < 0){
+		Theta = 0;	
+	}
+	return Theta;
+}
+
+double updateDutyCycle(double Theta){
+	double DutyCycle = 5 + 5*Theta/180;
+	return DutyCycle;
+}
+
+uint16_t setPWM_Register(uint16_t maxCount, double dutyCycle){	
+	uint16_t RegisterValue = (uint16_t) maxCount - maxCount/100*dutyCycle;// Sets the Pulse Width
+	return RegisterValue;	
+}
+
+uint16_t stopPWM(uint16_t Top){
+		return Top + 1;
+}
+
+
+'"></code></pre>
+</div>
+
+<div class="jumbotron">
+	<h3>ServoPWM.c</h3>
+	<p>This is a basic implementation of PWM on a servo uing the <strong>Servo_PWM.h</strong> file. It somple starts the the two servos at 0 degrees then increments the servo by 5 degrees to 179 degrees and then "wiggles" at the end. This is a good file to build an understaning of the more advanced features and functions of the <strong>Servo_PWM.h</strong> file.</p>
+	<pre><code highlight [code]="'#define F_CPU 1000000UL
+#define LED PD6
+#include \'\'ServoPWM.h\'\'
+#include <util/delay.h>
+// Basic macros to make simple functions more readable
+#define output_low(port, pin) port &= ~(1<<pin)
+#define output_high(port, pin) port |= (1<<pin)
+#define set_input(portdir, pin) portdir &= ~(1<<pin)
+#define set_output(portdir, pin) portdir |= (1<<pin)
+
+int main(void){
+	setupPWM();
+	int delta;
+	double ThetaPan, ThetaTilt;
+	ThetaPan = 90;
+	ThetaTilt = 90;
+	while(1){
+		_delay_ms(250);
+		output_high(PORTD, LED);
+		if(ThetaPan < 179){
+			delta = 5;
+		}
+		else{
+			delta = -5;		
+		}
+		ThetaPan = changeAngle(ThetaPan, delta);
+		ThetaTilt = changeAngle(ThetaTilt, delta);
+		DutyCyclePan = updateDutyCycle(ThetaPan);
+		DutyCycleTilt = updateDutyCycle(ThetaTilt);
+		OCR1A = setPWM_Register(TOP, DutyCyclePan);// Pan: increment theta, calcualte Duty Cycle, set PWM register accordingly
+		OCR1B = setPWM_Register(TOP, DutyCycleTilt);// Tilt: increment theta, calcualte Duty Cycle, set PWM register accordingly
+		_delay_ms(250);// Give the motor time to move
+		OCR1A = stopPWM(TOP);//Set the Pulse Width to Zero to stop sendong signals (removes servo \'\'jitters\'\')
+		OCR1B = stopPWM(TOP);// Any value above TOP will produce duty cycle of 0, ending transmission
+		output_low(PORTD, LED);
+	}
+	return 0;
+}
+'"></code></pre>
+</div>
+
+<div class="jumbotron">
+	<h3>UART_PWM.c</h3>
+	<p>This is the final implementaion that allows a user to send a string to the servo and produce the desired PWM on the device. The message format is like this <strong>r010d005s</strong> and is interpreted as "pan right 5 degrees and tilt down 5 degrees" the 's' means send and was used instead of a normal break character soo it can be entered in a serial monitor (Such as Arduino's). Another example message would be "l045u120s" which is interpreted as "pan left 45 degrees, tilt up 120 degrees". So the key commands are 'r' right, 'l' left, 'd' down, and 'u' up. <strong>Note: </strong> the directions will depend on how you wire your servos and their respective orientation.</p>
+	<pre><code highlight [code]="'#define F_CPU 1000000UL
+#define BAUDRATE 4800
+#define LED PD6
+#include \'\'ServoPWM.h\'\'
+#include \'\'BasicUART.h\'\'
+#include <util/delay.h>
+
+// These basic macros are used 
+#define output_low(port, pin) port &= ~(1<<pin)
+#define output_high(port, pin) port |= (1<<pin)
+#define set_input(portdir, pin) portdir &= ~(1<<pin)
+#define set_output(portdir, pin) portdir |= (1<<pin)
+
+char inString[32];// used to store incoming string
+double deltaThetaPan;// used to hold the change in pan rotation angle
+double deltaThetaTilt;// used to hold the change in tilt rotation angle
+
+// Format will be like this: r010d005   Right 10 (deg), Up 5 (deg)
+double parseDeltaThetaPan(char inString[9]){
+	int deltaThetaLocal = 0;// (0-179)
+	deltaThetaLocal += 100*(inString[1] - 48);// ASCII to int, in 100s place
+	deltaThetaLocal += 10*(inString[2] - 48);// ASCII to int, in 10s place		
+	deltaThetaLocal += (inString[3] - 48);// ASCII to int, in 1s place
+	return (double) deltaThetaLocal;// need as a double for later
+}
+
+double parseDeltaThetaTilt(char inString[9]){
+	int deltaThetaLocal = 0;// (0-179)
+	deltaThetaLocal += 100*(inString[5] - 48);// ASCII to int, in 100s place
+	deltaThetaLocal += 10*(inString[6] - 48);// ASCII to int, in 10s place		
+	deltaThetaLocal += (inString[7] - 48);// ASCII to int, in 1s place
+	return (double) deltaThetaLocal;// need as a double for later
+}
+
+int main(void){
+	USART_init();// Initialize UART
+	setupPWM();// Initialize PWM
+	int ThetaPan, ThetaTilt;
+	ThetaPan = 90;
+	ThetaTilt = 90;
+	while(1)
+	{
+		//_delay_ms(100);// Wait for 1 (s)
+		output_high(PORTD, LED);// Indicates that were waiting for a string
+		USART_getstring(inString);// Wait for a command
+		output_low(PORTD, LED);// Indicates that we have received a string
+
+		// read the numeric chars and convert to double
+		deltaThetaPan = parseDeltaThetaPan(inString);
+		deltaThetaTilt = parseDeltaThetaTilt(inString);
+		
+
+		// Determine which command was sent
+		// Pan
+		switch(inString[0]){
+			case \'l\':// pan right
+				ThetaPan = changeAngle(ThetaPan, deltaThetaPan);
+				DutyCyclePan = updateDutyCycle(ThetaPan);
+				OCR1A = setPWM_Register(TOP, DutyCyclePan);// Pan: increment theta, calcualte Duty Cycle, set PWM register accordingly
+				break;
+			case \'r\':// pan left
+				ThetaPan = changeAngle(ThetaPan, -deltaThetaPan);
+				DutyCyclePan = updateDutyCycle(ThetaPan);
+				OCR1A = setPWM_Register(TOP, DutyCyclePan);// Pan: increment theta, calcualte Duty Cycle, set PWM register accordingly
+				break;
+		}
+		// Tilt
+		switch(inString[4]){
+			case \'u\':// tilt up
+				ThetaTilt = changeAngle(ThetaTilt, deltaThetaTilt);
+				DutyCycleTilt = updateDutyCycle(ThetaTilt);
+				OCR1B = setPWM_Register(TOP, DutyCycleTilt);// Tilt: increment theta, calcualte Duty Cycle, set PWM register accordingly
+				break;
+			case \'d\':// tilt down		
+				ThetaTilt = changeAngle(ThetaTilt, -deltaThetaTilt);
+				DutyCycleTilt = updateDutyCycle(ThetaTilt);
+				OCR1B = setPWM_Register(TOP, DutyCycleTilt);// Tilt: increment theta, calcualte Duty Cycle, set PWM register accordingly
+				break;
+		}
+
+		_delay_ms(80);// Give the motor time to move
+		
+		OCR1A = stopPWM(TOP);//Set the Pulse Width to Zero to stop sendong signals (removes servo \'\'jitters\'\')
+		OCR1B = stopPWM(TOP);//Set the Pulse Width to Zero to stop sendong signals (removes servo \'\'jitters\'\')
+	}
+	return 0;	
+}
+'"></code></pre>
+	<p></p>
+</div>

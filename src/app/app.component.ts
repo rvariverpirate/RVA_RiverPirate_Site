@@ -1,4 +1,5 @@
 import { Component } from '@angular/core';
+import { ProjectsService } from './projects.service';
 
 @Component({
   selector: 'app-root',
@@ -6,5 +7,13 @@ import { Component } from '@angular/core';
   styleUrls: ['./app.component.css']
 })
 export class AppComponent {
-  title = 'RVA-RiverPirate6';
+  title = 'app';
+
+  constructor(private projectsService: ProjectsService){
+
+  }
+  someProperty = '';
+  ngOnInit(){
+  	this.someProperty = this.projectsService.allProjectData()[1].description;
+  }
 }

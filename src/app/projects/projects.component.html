@@ -1,0 +1,12 @@
+<div class="jumbotron">
+  <h1>{{ this.projectTypeHeader }}</h1>
+</div>
+
+<div class="list-group">
+  <a *ngFor="let project of projects" href="#" class="list-group-item" [routerLink]="['/projects', projectType, project.id]" >{{ project.title }}</a>
+</div>
+
+<div>
+			<h4>Note:</h4>
+			<p>Because of the nature of Highlight.js (syntax highlighting used on this site) all double quotes " used in codes displayed are actually two single quotes '' . If you plan to use these codes please grab them from the github repos.</p>
+</div>

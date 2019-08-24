@@ -1,0 +1,86 @@
+<div class="jumbotron">
+	<div class="container">
+		<div class="row">
+			<div class="col-md-8">
+				<h2>{{ selectedProject.title }}</h2>
+			</div>
+			<div class="col-md-4">
+				<img src="{{selectedProject.mainImage}}" style="width:100px;height:100px;">
+			</div>
+		</div>
+	</div>
+</div>
+<div class="jumbotron">
+	<p>{{ selectedProject.description }}</p>
+	<a target="_blank" [href]="'' + selectedProject.gitHub + ''">Project Source Codes</a>
+<!--ng-container *ngComponentOutlet="page"></ng-container-->
+</div>
+<div *ngIf="isTest">
+	<app-test></app-test>
+</div>
+<div *ngIf="isBbcRssFeed">
+	<app-bbc-rss-feed></app-bbc-rss-feed>
+</div>
+<div *ngIf="isBrewBuddy">
+	<app-brew-buddy></app-brew-buddy>
+</div>
+<div *ngIf="isTmExperiments">
+	<app-tm-experiments></app-tm-experiments>
+</div>
+<div *ngIf="isOledExperiments">
+	<app-oled-experiments></app-oled-experiments>
+</div>
+<div *ngIf="isBoxingBluetooth">
+	<app-boxing-bluetooth></app-boxing-bluetooth>
+</div>
+<div *ngIf="isMultipleGearing">
+	<app-multiple-gearing></app-multiple-gearing>
+</div>
+<div *ngIf="isBrewTracker">
+	<app-brew-tracker></app-brew-tracker>
+</div>
+<div *ngIf="isGuitarTuner">
+	<app-guitar-tuner></app-guitar-tuner>
+</div>
+<div *ngIf="isSpurGears">
+	<app-spur-gears></app-spur-gears>
+</div>
+<div *ngIf="isHBridge">
+	<app-h-bridge></app-h-bridge>	
+</div>
+<div *ngIf="isShiftRegister">
+	<app-shift-reg-4-bit></app-shift-reg-4-bit>
+</div>
+<div *ngIf="isTimer3Minute">
+	<app-timer-3-min></app-timer-3-min>
+</div>
+<div *ngIf="isPlanetaryGears">
+	<app-planetary-gears></app-planetary-gears>
+</div>
+<div *ngIf="isParallelToSerial">
+	<app-parallel-to-serial></app-parallel-to-serial>
+</div>
+<div *ngIf="isBasicUart">
+	<app-basic-uart></app-basic-uart>
+</div>
+<div *ngIf="isGenevaMechanism">
+	<app-geneva-mechanism></app-geneva-mechanism>
+</div>
+<div *ngIf="isServoPwm">
+	<app-servo-pwm></app-servo-pwm>
+</div>
+<div *ngIf=isSquareGears>
+	<app-square-gears></app-square-gears>
+</div>
+<div *ngIf=isBarkAngel>
+	<app-bark-angel></app-bark-angel>
+</div>
+<div *ngIf=isDifferential>
+	<app-differential></app-differential>
+</div>
+<div *ngIf=isRiverWatch>
+	<app-river-watch></app-river-watch>
+</div>
+<div *ngIf=isRiverScraper>
+	<app-river-scraper></app-river-scraper>
+</div>

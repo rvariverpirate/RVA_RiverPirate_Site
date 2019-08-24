@@ -1,0 +1,79 @@
+<h3>
+  Interfacing a PIC32 (NU32) with a SSD11306 OLED screen to display an image.
+</h3>
+<p>
+The OLED display used in this project uses i2c communication to receive serial data that determines which pixels to turn on or off. By converting an image to the appropriate format (a hex map) which we can then use to display an image on the screen.
+</p>
+<div class="jumbotron">
+	<h3>Part 1: Converting the image to a hex map</h3>
+	<p>First you will want to find an image that will display nicely on a basically black and white screen. I chose a simple .png with few colors and a white background to provide good contrast. Once you have your image you will need to convert it to a .bmp if it is not already in this format. There are several free sites that provide this service, I used <a href="http://image.online-convert.com/convert-to-bmp">this one</a>. Because the OLED screen we are using only displays 1 color per pixel you will want to select 'Monochrome' and 128x64 pixels to be sure it fits on the screen (this will probably squish the image but for the purpose of this tutorial thats ok and you can crop the original image in paint if you want to resolve this). The original .png and the converted .bmp are shown below.</p>
+
+	<div class="row">
+		<div class="col-sm-6">
+			<h4>Original .png image</h4>
+			<img src="assets/images/PythonLogo.png">
+		</div>
+		<div class="col-sm-6">
+			<h4>Image after conversion to .bmp</h4>
+			<img src="assets/images/PythonLogo.bmp">
+		</div>
+	</div>
+
+	<p>The next step will be to convert your new .bmp to a hex map. For my Mac I used a program called <a href="">Bitmapper</a> which takes a .bmp and converts it to a C array (if you're using Windows or Linux there should be some online converters available asjumbotron, search '.bmp to C array'. The resulting code will look something like this only longer and with no '....'.</p>
+	<pre><code highlight [code]="' const unsigned char imageHex[] = {
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xfc, 0xff, 0xff, 0xfe, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,....
+	....0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf0, 0x3f, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00} '"></code></pre>
+	<p>For simplicity I just pasted this at the top of the main() function, but you could probably keep several images as seperate includes if you wanted.</p>
+</div>
+
+<div class="jumbotron">
+	<h3>
+	Part 2: Code Dependencies
+	</h3>
+	<p>
+		As much as I'd like to take credit for all of the code used in this project the foundation of this code was built on an example from "Embedded Computing and Mechantonics with the PIC32 Microcontroller" (a great guide for PIC32's). The entire source code is available on my <a href="https://github.com/rvariverpirate/OLED-Experiments/blob/master/i2c_bitmaps/i2c_bitmap.c">GitHub page</a>. Because I'm not reinventing the wheel this page will focus on getting an image to the screen.
+	</p>
+</div>
+
+<div class="jumbotron">
+	<h3>
+	Part 3: Displaying the Image
+	</h3>
+	<p>In the GitHub project directory (OLED-Experiments/i2c_bitmaps) look for 'i2c_bitmaps.c'. This is the main file for this project. You'll notice a large char array at the beginning of main. This is the hex mapped version of the image shown below. Don't worry you wont have to type this manually to change the image I'll describe generating the hex map shortly.</p>
+
+	<p>Within the while statement notice this section.</p>
+	<pre><code highlight [code]="'    for(i = 0; i < sizeof(imageHex); i++){
+	      for(j = 7; 0 <= j; j--){
+	        if((imageHex[i] >> j) & 0x01){
+	          display_pixel_set(row, col, 1);
+	        }
+	        col++;
+	        if(col >= WIDTH){
+	          row++;
+	          col = 0;
+	        }
+	      }
+	    }
+	    display_draw();'"></code></pre>
+	<p>Note that display_pixel_set(row, col, 1) simply determines if a pixel at a given row and column is illuminated (1) or not (0). Our hex map 'imageHex[]' contains an array of hex values where each bit coresponds to a pixel in our display (i.e. bit 0 of imageHex[0] would be pixel 0). With this in mind we simply need a way to iterate through the each hex value, then iterate though each bit of that byte. We then map this bit to it's coresponding row and column of our OLED screen. Finally calling display_draw() updates tehe screen with the screen.</p>
+</div>
+
+<div class="jumbotron">
+	<h3>
+		Part 4: Scrolling the image
+	</h3>
+	<p>Now lets get out image to repeadly scoll down the screen. If you were able to follow what we did above then good news, this part is a little easier. All we have to do now is clear the screen, increment the row count, and reprint the image. Once the previous image has been drawn we clear the screen with the following code. Notice that display_pixel_set() is passed a zero for the third argument thus clearing each pixel.</p>
+	<pre><code highlight [code]="'    for(i = 0; i < WIDTH; i++){
+	      for(j = 0; j < HEIGHT; j++){
+	        display_pixel_set(j, i, 0);
+	      }
+	    }'"></code></pre>
+	<p>Now we just need to increment the row until the entire image is shifted off the screen. Once this happens we will reset the row offset to zero placing the image back in it's original position and the while loop will keep it scrolling.</p>
+	<pre><code highlight [code]="'    offset ++;
+	    if(offset > HEIGHT){
+	      offset = 0;
+	    }
+	    row = offset;'"></code></pre>
+
+    <p>That wraps up this tutorial, hope you found this helpfull and are able to play around with the your OLED screen with the NU32. If your confused about anyhting check out the source code for this project which will hopefully help you out <a href="https://github.com/rvariverpirate/OLED-Experiments/blob/master/i2c_bitmaps/i2c_bitmap.c">OLED Bitmap Source Code</a>.</p>
+</div>

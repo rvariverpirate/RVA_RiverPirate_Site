@@ -1,0 +1,211 @@
+<h3>
+	Get live updates of the BBC's headline news on an LCD screen using ESP8266 WiFi module.
+</h3>
+<p>
+	The ESP-8266 is a very popular WiFi module for a variety of IOT projects. Whats more is that this little device can be setup to run Arduino code! This project will demonstrate how to retreive data from the web, format it, and display it on an LCD screen.
+</p>
+<div class="jumbotron">
+	<h3>Parts Required</h3>
+	<p>
+		For this project I'm using an ESP-8266 12 module. They can be found online for around $5.
+		For the display I'm using a INSERT FULL NAME 16x2 RGB LCD display. Additionally you'll need a FTDI cable, this is a serial to UART adaptor that will allow you to send serial data from your USB port to a device. You'll need it to flash your code to the ESP module. Additionally you'll need a LM3v33 3.3V voltage regulator (ESP runs on 3.3V), a few 10k resistors, 2 bread boards (ESP pin layout is not compatible with just 1), 2 push buttons (to enter programming mode), and several breadboard wires. 
+	</p>
+</div>
+
+<div class="jumbotron">
+	<h3>Part 1: ESP-8266 to LCD</h3>
+	<p>
+		Before we dive into the code to pull data from a website and display it on the LCD screeen lets first get a basic "Hello World" example working. First you'll want to <a href="https://diyhacking.com/esp8266-tutorial/">bootload arduino to esp8266</a>. Hopefully the link will get you up and running.
+	</p>
+	<p>
+		The full code for this sub-section is available <a href="https://github.com/rvariverpirate/bbcRssFeedReader/blob/master/simpleLcdPrint/simpleLcdPrint.ino">here.</a>
+	</p>
+	<h4>FTDI to ESP Connections</h4>
+	<div class="row">
+		<div class="col-sm-6">
+				<ul>
+					FTDI -----> ESP-8266
+					<li>GND	-----> GND</li>
+					<li>TX	-----> RX</li>
+					<li>RX	-----> TX</li>
+				</ul>
+		</div>
+		<div class="col-sm-6">
+			<img src="assets/images/ftdi_5v.jpg" style="width: 330px; height: 110px">
+		</div>
+	</div>
+	<h4>ESP to LCD Connections</h4>
+	<div class="row">
+		<div class="col-sm-6">
+				<ul>
+					ESP -----> LCD	Type
+					<li>D16 -----> 11	Data</li>
+					<li>D14 -----> 12	Data</li>
+					<li>D12 -----> 13	Data</li>
+					<li>D13 -----> 14	Data</li>
+					<li>D5  -----> 4	Control</li>
+					<li>D4  -----> 6	Control</li>
+				</ul>
+		</div>
+		<div class="col-sm-6">
+			<img src="assets/images/esp8266-12-pinout.jpg" style="width: 330px; height: 165px">
+		</div>
+		<div>
+			<img src="assets/images/rgblcddimensions.gif" style="width: 100%; height: 100%; padding-top: 40px">
+		</div>
+	</div>
+</div>
+
+<div class="jumbotron">
+	<h3>Part 2: Hello World Example</h3>
+	<h4>simpleLcdPrint.ino</h4>
+	<pre><code highlight [code]="'#include <LiquidCrystal.h>
+#include <ESP8266WiFi.h>
+#include <WiFiClient.h>
+#include <WiFiClientSecure.h>
+
+const int rs = 5, en = 4, d4 = 16, d5 = 14, d6 = 12, d7 = 13;
+LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
+
+void setup() {
+  // Setup the LCDs number of columns and rows:
+  lcd.begin(16,2);
+
+  // Print a message to the LCD
+  lcd.print(\'\'Hello World!\'\');
+  
+}
+
+void loop() {
+  // set cursor to column 0, line 1
+  lcd.setCursor(0,1);
+
+  // print number of seconds since reset
+  lcd.print(millis()/1000);
+
+}'"></code></pre>
+
+</div>
+
+
+<div class="jumbotron">
+	<h3>printHtmlToUart.ino</h3>
+	<p>Once youve gotten the "Hello World" example running we'll begin to explore some of the key features utilized to retrieve an RSS feed using the ESP.</p>
+	<p>First note the included libraries.</p>
+	<pre><code highlight [code]="'#include <ESP8266WiFi.h>
+#include <WiFiClient.h>'"></code></pre>
+	<p>These provide all the funcions you'll need for WiFI communication.</p>
+	<p>A little further down is where you setup the code to connect to your own WiFi and establish key phrases for retreiving and parsing the RSS feed.</p>
+
+	<pre><code highlight [code]="'// Home WiFi
+const char WIFI_SSID[] = \'YourWiFISSID\';
+const char WIFI_PSK[] = \'YourPassword\';
+const String startSequence = \'<description><![CDATA[\';// Start read
+const String endSequence = \']]></description>\';// End read
+ 
+// Remote site information
+const char http_site[] = \'feeds.bbci.co.uk\';
+const int http_port = 80;'"></code></pre>
+
+<p>The "startSequence" and "endSequence" strings are used to grab the content we want that occurs between these strings in the returned GET request. The raw .xml of the RSS feed can be viewed <a href="http://feeds.bbci.co.uk/news/video_and_audio/world/rss.xml">here</a>.</p>
+
+<p>The next step will be to connect to you local WiFi. In order to do this use the "connectWiFi" function.</p>
+
+<pre><code highlight [code]="'void connectWiFi() {
+  
+  byte led_status = 0;
+  
+  // Set WiFi mode to station (client)
+  WiFi.mode(WIFI_STA);
+  
+  // Initiate connection with SSID and PSK
+  WiFi.begin(WIFI_SSID, WIFI_PSK);
+  
+  // Blink LED while we wait for WiFi connection
+  while ( WiFi.status() != WL_CONNECTED ) {
+    digitalWrite(LED_PIN, led_status);
+    led_status ^= 0x01;
+    delay(100);
+    Serial.println(\'Trying to connect\');
+    lcd.println(\'Trying to connect\');// maybe remove this later
+  }'"></code></pre>
+
+
+<p>Next you'll make a GET request via the "getPage" method to the page that contains the RSS feed. Note that the "GET /news/"... portion doesn't look like a URL like we'd expect. This is because that portion of the URL is stored in the variable "http_site", the host site of the RSS feed.</p>
+
+<pre><code highlight [code]="'// Perform an HTTP GET request to a remote page
+bool getPage() {
+  
+  // Attempt to make a connection to the remote server
+  if ( !client.connect(http_site, http_port) ) {
+    return false;
+  }
+  
+  // Make an HTTP GET request
+  client.println(\'GET /news/video_and_audio/world/rss.xml HTTP/1.1\');
+  client.print(\'Host: \');
+  client.println(http_site);
+  client.println(\'Connection: close\');
+  client.println();
+  
+  return true;
+}'"></code></pre>
+
+
+<p>Next were going to use those key phrases "startSequence" and "endSequence" to extract only the portion of the RSS feed that we want while ignoring the rest. Within the "loop()" function we will retrieve the data, scan for these strings, and trim the data.</p>
+
+<pre><code highlight [code]="'void loop() {
+  
+  // If there are incoming bytes, print them
+  if ( client.available() ) {
+    char c = client.read();
+    if(isStartSequence != startSequence)// Keep looking
+    { 
+        isStartSequence.remove(0,1);// Remove first char of string
+        isStartSequence += c;/// append to end
+     }
+     else // Start sequence was found start recording
+     {
+        if(isEndSequence != endSequence)
+        {
+             isEndSequence.remove(0,1);// Remove first char
+             isEndSequence += c;// add to end
+             description += c;// Add data to description
+        }
+        else // Found end sequence after start sequence
+        {     
+            
+            if(line < 16){// Get first 15 stories
+                // Replace end sequence with blank space
+                description.replace(endSequence, String(\' \'));'"></code></pre>
+
+<div>Anoter funtion worth mentioning here is "scrollToLeftLargeString()". This is usefull for scrolling the RSS Feed accross the LCD. Technically we are just clearing the first element of a string and then appending a new character to it, clearing the display, then displaying a the new string. But because of issues with the LCD's buffer this hack is needed.</div>
+
+<pre><code highlight [code]="'void scrollToLeftLargeString(int line, String str, int delayTime){
+  String tempString = \'                 \';
+  lcd.clear();
+  for(int i = 0; i < str.length() + 32; i++)
+  {
+    if(i < str.length()){
+      tempString += str[i];// add current char to temporary string
+    }
+    else
+    {
+      tempString += \' \';// let the last  16 chars scroll across the screen
+    }
+    if(i > 16)// string is loaded
+    {
+      tempString.remove(0,1);// remove the first character in the temp string
+      lcd.println(tempString);
+      Serial.println(tempString);
+      delay(delayTime);
+      lcd.clear();
+    }
+  }
+}'"></code></pre>
+
+<p>Hopefully this page provided some insight to the functions and features of using the ESP-8266. The entire <a href="https://github.com/rvariverpirate/bbcRssFeedReader">source code can be found here</a> for your refference.</p>
+
+</div>
+
+
