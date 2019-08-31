@@ -28,6 +28,23 @@ export class ProjectsComponent implements OnInit {
   			this.projectType = 2;
         this.projectTypeHeader = "Pythonics";
   		}
+  		else if(params['type'] == 'foraging'){
+  			this.projectType = 3;
+        this.projectTypeHeader = "Foraging";
+		}
+  		else if(params['type'] == 'printing'){
+  			this.projectType = 4;
+        this.projectTypeHeader = "3D Printing";
+		}
+  		else if(params['type'] == 'robotics'){
+  			this.projectType = 5;
+        this.projectTypeHeader = "Robotics";
+		}
+  		else if(params['type'] == 'radio'){
+  			this.projectType = 6;
+        this.projectTypeHeader = "Amatuer Radio";
+		}
+
   		console.log(params['type']);
   	});
   	this.projects = this.projectsService.getProjectsOfType(this.projectType);

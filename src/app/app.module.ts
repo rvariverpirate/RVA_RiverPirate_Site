@@ -44,6 +44,12 @@ import { BarkAngelComponent } from './projectsHtml/bark-angel/bark-angel.compone
 import { DifferentialComponent } from './projectsHtml/differential/differential.component';
 import { RiverWatchComponent } from './projectsHtml/river-watch/river-watch.component';
 import { RiverScraperComponent } from './projectsHtml/river-scraper/river-scraper.component';
+import { ForagingOverviewComponent } from './foraging-overview/foraging-overview.component';
+import { ThreeDPrintingOverviewComponent } from './three-d-printing-overview/three-d-printing-overview.component';
+import { RoboticsOverviewComponent } from './robotics-overview/robotics-overview.component';
+import { RadioOverviewComponent } from './radio-overview/radio-overview.component';
+import { DasBootComponent } from './projectsHtml/das-boot/das-boot.component';
+import { PhoneCaseComponent } from './projectsHtml/phone-case/phone-case.component';
 
 
 @NgModule({
@@ -79,7 +85,13 @@ import { RiverScraperComponent } from './projectsHtml/river-scraper/river-scrape
     BarkAngelComponent,
     DifferentialComponent,
     RiverWatchComponent,
-    RiverScraperComponent
+    RiverScraperComponent,
+    ForagingOverviewComponent,
+    ThreeDPrintingOverviewComponent,
+    RoboticsOverviewComponent,
+    RadioOverviewComponent,
+    DasBootComponent,
+    PhoneCaseComponent
   ],
   imports: [
     BrowserModule,

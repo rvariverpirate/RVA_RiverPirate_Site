@@ -6,6 +6,10 @@ import { ProjectType } from './projectType';
 // electronic: 0
 // mechanism: 1
 // pyhton: 2
+// foraging: 3
+// printing: 4
+// robotics: 5
+// radio: 6
 
 const PROJECT : Project[] =[
 	{id: 21, projectType: 0, title: "River Watch", description: "Get live updates on the James Rives bacteria level, water temp, water level, and weather all streamed to a LCD display. Includes PCB and 3D printed case!", gitHub: "https://github.com/rvariverpirate/RiverWatch", mainImage: "assets/images/RiverWatchMain.png"},
@@ -29,7 +33,11 @@ const PROJECT : Project[] =[
 	{id: 18, projectType: 1, title: "Square Gears", description: "Basic example of square gears created in solidworks.", gitHub: "https://github.com/rvariverpirate", mainImage: "assets/images/squareGears.png"},
 	{id: 19, projectType: 2, title: "Barkangel", description: "Track your dogs every move using a Raspberry Pi, ATMega328p, and a pan-tilt camera.", gitHub: "https://github.com/rvariverpirate/Barkangel", mainImage: "assets/images/Arkangel.jpg"},
 	{id: 20, projectType: 1, title: "Differential Gear", description: "Basic example of a differential gear used in automotive vehicles. Created in SolidWorks.", gitHub: "https://github.com/rvariverpirate", mainImage: "assets/images/differential.jpg"},
-	{id: 22, projectType: 2, title: "River Scraper", description: "This is the web-scraper used to pre-process data for the River Watch WiFi module.", gitHub: "https://github.com/rvariverpirate/RiverScraper", mainImage: "assets/images/RiverScraperMain.jpg"}
+	{id: 22, projectType: 2, title: "River Scraper", description: "This is the web-scraper used to pre-process data for the River Watch WiFi module.", gitHub: "https://github.com/rvariverpirate/RiverScraper", mainImage: "assets/images/RiverScraperMain.jpg"},
+	{id: 23, projectType: 4, title: "Das Boot Trophy", description: "Annual Das Boot Championchip Trophy designed in SolidWorks and printed on Ender3", gitHub: "https://thingiverse.com/TODO", mainImage: "assets/images/dasboot-cropped.jpg"},
+	{id: 24, projectType: 4, title: "Pixel3 Phone Case", description: "Printable phone case for Google Pixel3", gitHub: "https://thingiverse.com/TODO", mainImage: "assets/images/phonecase-back-cropped.jpg"}
+
+
 ];
 
 @Injectable()

@@ -23,7 +23,8 @@ import { BarkAngelComponent } from '../projectsHtml/bark-angel/bark-angel.compon
 import { DifferentialComponent } from '../projectsHtml/differential/differential.component';
 import { RiverWatchComponent } from '../projectsHtml/river-watch/river-watch.component';
 import { RiverScraperComponent } from '../projectsHtml/river-scraper/river-scraper.component';
-
+import { DasBootComponent } from '../projectsHtml/das-boot/das-boot.component';
+import { PhoneCaseComponent } from '../projectsHtml/phone-case/phone-case.component';
 
 import { NgModule } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
@@ -72,6 +73,8 @@ export class ProjectDetailsComponent implements OnInit {
   isDifferential: boolean;
   isRiverWatch: boolean;
   isRiverScraper: boolean;
+  isDasBoot: boolean;
+  isPhoneCase: boolean;
 
   constructor(private projectService: ProjectsService, private route: ActivatedRoute) { }
   ngOnInit() {
@@ -150,6 +153,13 @@ export class ProjectDetailsComponent implements OnInit {
         else if(this.projectId == 22){
       this.isRiverScraper = true;
     }
+        else if(this.projectId == 23){
+      this.isDasBoot = true;
+    }
+	else if(this.projectId == 24){
+      this.isPhoneCase = true;
+    }
+    
 
     //else{
     //  this.isTest = true;

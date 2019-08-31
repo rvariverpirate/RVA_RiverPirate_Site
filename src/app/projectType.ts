@@ -1,5 +1,9 @@
 export enum ProjectType{
 	electronic,
 	mechanism,
-	python
+	python,
+	foraging,
+	printing,
+	robotics,
+	radio,
 }
