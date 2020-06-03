@@ -1,7 +1,6 @@
 import { BrowserModule } from '@angular/platform-browser';
 import { NgModule } from '@angular/core';
 import { AppComponent } from './app.component';
-import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
 import { TopNavBarComponent } from './top-nav-bar/top-nav-bar.component';
 import { ProjectsComponent } from './projects/projects.component';
 import { ElectronicsOverViewComponent } from './electronics-over-view/electronics-over-view.component';
@@ -95,7 +94,6 @@ import { PhoneCaseComponent } from './projectsHtml/phone-case/phone-case.compone
   ],
   imports: [
     BrowserModule,
-    NgbModule.forRoot(),
     HighlightModule.forRoot({ theme: 'atelier-seaside-dark'}),
     RouterModule.forRoot([
       {
