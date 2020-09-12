@@ -49,6 +49,8 @@ import { RoboticsOverviewComponent } from './robotics-overview/robotics-overview
 import { RadioOverviewComponent } from './radio-overview/radio-overview.component';
 import { DasBootComponent } from './projectsHtml/das-boot/das-boot.component';
 import { PhoneCaseComponent } from './projectsHtml/phone-case/phone-case.component';
+import { AboutMeComponent } from './about-me/about-me.component';
+import { MySpecsComponent } from './my-specs/my-specs.component';
 
 
 @NgModule({
@@ -90,7 +92,9 @@ import { PhoneCaseComponent } from './projectsHtml/phone-case/phone-case.compone
     RoboticsOverviewComponent,
     RadioOverviewComponent,
     DasBootComponent,
-    PhoneCaseComponent
+    PhoneCaseComponent,
+    AboutMeComponent,
+    MySpecsComponent
   ],
   imports: [
     BrowserModule,
@@ -112,6 +116,10 @@ import { PhoneCaseComponent } from './projectsHtml/phone-case/phone-case.compone
       {
         path: 'projects/:type/:id',
         component: ProjectDetailsComponent
+      },
+      {
+        path: 'my-specs',
+        component: MySpecsComponent
       },
       {
         path: '**', redirectTo: '/home', pathMatch: 'full'
