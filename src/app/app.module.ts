@@ -63,7 +63,6 @@ import { MySpecsComponent } from './my-specs/my-specs.component';
     MechanismsOverviewComponent,
     MainPageComponent,
     ProjectDetailsComponent,
-    PrismComponent,
     TestComponent,
     BbcRssFeedComponent,
     BrewBuddyComponent,
