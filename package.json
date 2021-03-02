@@ -28,7 +28,7 @@
     "bootswatch": "^4.5.0",
     "core-js": "^2.5.4",
     "font-awesome": "^4.7.0",
-    "jquery": "^1.9.1",
+    "jquery": "^3.5.1",
     "ngx-highlightjs": "^2.1.1",
     "popper.js": "^1.14.3",
     "rxjs": "~6.5.2",
